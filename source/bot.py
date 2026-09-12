@@ -34,7 +34,7 @@ class Match:
     team_b: int | None = None
     steps: list[Step] = field(default_factory=list)
     step_index: int = 0
-    available_maps: list[str] = field(default_factory=lambda: list(MAP_POOL))
+    available_maps: set[int] = field(default_factory=lambda: set(range(1, len(MAP_POOL) + 1)))
     selected_maps: dict[int, dict[str, object]] = field(default_factory=dict)
     dice_a: int = 0
     dice_b: int = 0
@@ -84,7 +84,9 @@ def build_steps(best_of: int) -> list[Step]:
 
 def format_maps(match: Match) -> str:
     return "\n".join(
-        f"{index}: {map_name}" for index, map_name in enumerate(match.available_maps, start=1)
+        f"{index}: {MAP_POOL[index - 1]}"
+        + ("" if index in match.available_maps else " (BAN済み)")
+        for index in range(1, len(MAP_POOL) + 1)
     )
 
 
@@ -224,7 +226,7 @@ async def on_message(message: discord.Message) -> None:
 
     expected_user = representative_id(match, step.team)
     if expected_user is None:
-        if step.team == "B" and content.isdigit() and 1 <= int(content) <= len(match.available_maps):
+        if step.team == "B" and content.isdigit() and int(content) in match.available_maps:
             match.team_b = message.author.id
             expected_user = match.team_b
         else:
@@ -237,10 +239,11 @@ async def on_message(message: discord.Message) -> None:
 
     value = int(content)
     if step.action in {"BAN", "PICK"}:
-        if not 1 <= value <= len(match.available_maps):
+        if value not in match.available_maps:
             await message.channel.send("その番号は選択できません。表示されている番号を入力してください。")
             return
-        selected_map = match.available_maps.pop(value - 1)
+        selected_map = MAP_POOL[value - 1]
+        match.available_maps.remove(value)
         if step.action == "PICK":
             match.selected_maps[step.map_number or 1] = {"map": selected_map}
         await message.channel.send(f"{selected_map}を{step.action}しました。")
@@ -249,7 +252,8 @@ async def on_message(message: discord.Message) -> None:
             await message.channel.send("攻守は1または2で入力してください。")
             return
         map_number = step.map_number or 1
-        selected = match.selected_maps.setdefault(map_number, {"map": match.available_maps[0]})
+        remaining_map = min(match.available_maps)
+        selected = match.selected_maps.setdefault(map_number, {"map": MAP_POOL[remaining_map - 1]})
         selected["side"] = value
         selected["side_team"] = step.team
         await message.channel.send(f"チーム{step.team}の陣営を{side_name(value)}にしました。")
