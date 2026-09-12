@@ -32,6 +32,25 @@ $env:DISCORD_TOKEN="Botトークン"
 python source/bot.py
 ```
 
+### マッププールの変更
+
+`source/bot.py` の `MAP_POOL` を編集してください。
+マップ名の並び順が、Botで表示される番号になります。
+
+```python
+MAP_POOL = (
+	"ASCENT",
+	"SPLIT",
+	"LOTUS",
+	"FRACTURE",
+	"HAVEN",
+	"ICEBOX",
+	"PEARL",
+)
+```
+
+マッププールは7個固定です。追加・削除・並び順の変更後はBotを再起動してください。
+
 ### コマンド
 
 ```text
