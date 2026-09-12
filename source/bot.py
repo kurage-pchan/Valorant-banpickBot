@@ -36,9 +36,6 @@ class Match:
     step_index: int = 0
     available_maps: set[int] = field(default_factory=lambda: set(range(1, len(MAP_POOL) + 1)))
     selected_maps: dict[int, dict[str, object]] = field(default_factory=dict)
-    dice_a: int = 0
-    dice_b: int = 0
-    team_choice_pending: bool = True
 
     @property
     def current_step(self) -> Step | None:
@@ -126,9 +123,14 @@ async def finish_match(message: discord.Message, match: Match) -> None:
     lines = ["BAN&PICKを終了します。"]
     for map_number in sorted(match.selected_maps):
         result = match.selected_maps[map_number]
+        side_team = str(result["side_team"])
+        side_user = representative_id(match, side_team)
         lines.append(f"\n【第{map_number}マップ】")
         lines.append(f"** {result['map']} **")
-        lines.append(f"チーム{result['side_team']}の選択陣営： ** {side_name(result['side'])} **")
+        lines.append(
+            f"チーム{side_team} <@{side_user}> の選択陣営： "
+            f"** {side_name(result['side'])} **"
+        )
 
     await message.channel.send("\n".join(lines))
     matches.pop(match.channel_id, None)
@@ -189,31 +191,15 @@ async def on_message(message: discord.Message) -> None:
             steps=build_steps(best_of),
         )
         matches[channel_id] = match
-        match.dice_a = random.randint(1, 100)
-        match.dice_b = random.randint(1, 100)
-        while match.dice_a == match.dice_b:
-            match.dice_a = random.randint(1, 100)
-            match.dice_b = random.randint(1, 100)
-
         await message.channel.send(
             f"BO{best_of}のバンピックを開始します。\n"
-            f"チームA代表者: <@{match.team_a}>\n"
-            f"ダイス結果: A={match.dice_a}, B={match.dice_b}\n"
-            f"ダイス勝者はチームA/Bのどちらを担当するか入力してください。"
+            f"チームA: <@{match.team_a}>"
         )
+        await send_step_prompt(message, match)
         return
 
     match = matches.get(channel_id)
     if match is None:
-        return
-
-    if match.team_choice_pending:
-        if message.author.id != match.team_a or content not in {"A", "B"}:
-            await message.channel.send("チームA代表者は A または B を入力してください。")
-            return
-        match.team_choice_pending = False
-        await message.channel.send(f"チーム{content}を選択しました。")
-        await send_step_prompt(message, match)
         return
 
     if not content.isdigit():
