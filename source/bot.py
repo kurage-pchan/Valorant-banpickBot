@@ -258,7 +258,8 @@ async def on_message(message: discord.Message) -> None:
     await send_step_prompt(message, match)
 
 
-token = os.environ.get("DISCORD_TOKEN")
+DISCORD_TOKEN = "ここにBotトークンを入力"
+token = os.environ.get("DISCORD_TOKEN") or DISCORD_TOKEN
 if not token:
     raise RuntimeError("環境変数DISCORD_TOKENを設定してください。")
 
