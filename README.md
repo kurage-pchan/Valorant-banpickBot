@@ -1,5 +1,7 @@
 # Valorant-BanpickBot
 
+## Version 1.0.0
+
 VALORANTのチーム戦でBan/Pickを行う際の案内をしてくれるBotです
 
 ## How to use
